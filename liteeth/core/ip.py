@@ -212,8 +212,7 @@ class LiteEthIPRX(Module):
         fsm.act("IDLE",
             If(depacketizer.source.valid & checksum.done,
                 NextState("DROP"),
-                If((depacketizer.source.target_ip == ip_address) &
-                   (depacketizer.source.version == 0x4) &
+                If((depacketizer.source.version == 0x4) &
                    (depacketizer.source.ihl == 0x5) &
                    (checksum.value == 0),
                    NextState("RECEIVE")
