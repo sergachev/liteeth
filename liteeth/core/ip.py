@@ -91,7 +91,7 @@ class LiteEthIPV4Packetizer(Packetizer):
 
 
 class LiteEthIPTX(Module):
-    def __init__(self, mac_address, ip_address, arp_table, dw=8):
+    def __init__(self, mac_address, ip_address, netmask, arp_table, dw=8):
         self.sink   = sink   = stream.Endpoint(eth_ipv4_user_description(dw))
         self.source = source = stream.Endpoint(eth_mac_description(dw))
         self.target_unreachable = Signal()
@@ -132,6 +132,9 @@ class LiteEthIPTX(Module):
             If(packetizer.source.valid,
                 If(sink.ip_address[28:] == mcast_ip_mask,
                     NextValue(target_mac, Cat(sink.ip_address[:23], 0, mcast_oui)),
+                    NextState("SEND")
+                ).Elif(sink.ip_address[:32-netmask] == (0xff_ff_ff_ff >> netmask),
+                    NextValue(target_mac, 0xff_ff_ff_ff_ff_ff),
                     NextState("SEND")
                 ).Else(
                     NextState("SEND_MAC_ADDRESS_REQUEST")
@@ -247,8 +250,8 @@ class LiteEthIPRX(Module):
 # IP -----------------------------------------------------------------------------------------------
 
 class LiteEthIP(Module):
-    def __init__(self, mac, mac_address, ip_address, arp_table, dw=8):
-        self.submodules.tx = tx = LiteEthIPTX(mac_address, ip_address, arp_table, dw=dw)
+    def __init__(self, mac, mac_address, ip_address, netmask, arp_table, dw=8):
+        self.submodules.tx = tx = LiteEthIPTX(mac_address, ip_address, netmask, arp_table, dw=dw)
         self.submodules.rx = rx = LiteEthIPRX(mac_address, ip_address, dw=dw)
         mac_port = mac.crossbar.get_port(ethernet_type_ip, dw)
         self.comb += [
